@@ -1,9 +1,38 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./index.scss";
 import axios from "axios";
 
-const Books = () => {
+const Table = ({ books }) => {
+  return (
+    <div className="list">
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Content</th>
+          </tr>
+        </thead>
+        <tbody>
+          {books.map((book) => {
+            return (
+              <tr key={book.id}>
+                <td>{book.title}</td>
+                <td>{book.content}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const Books = ({ onclickForm }) => {
+  const [books, setBooks] = useState([]);
+  const [isLooding, setIsloading] = useState(false);
+
   const onsubmit = (e) => {
+    setIsloading(true);
     e.preventDefault();
     const data = {
       title: e.target.title.value,
@@ -16,6 +45,7 @@ const Books = () => {
         alert(`${response.data.title} book added`);
         axios.get("http://localhost:3005/books").then((response) => {
           setBooks(response.data);
+          setIsloading(false);
         });
       })
       .catch((err) => {
@@ -23,7 +53,33 @@ const Books = () => {
       });
   };
 
-  const [books, setBooks] = useState([]);
+  useEffect(() => {
+    setIsloading(true);
+    const cancelToken = axios.CancelToken.source();
+
+    axios
+      .get("http://localhost:3005/books", { cancelToken: cancelToken.token })
+      .then((response) => {
+        setBooks(response.data);
+        setIsloading(false);
+      })
+      .catch((error) => {
+        if (axios.isCancel(error)) {
+          console.log("Request cancel edildi.");
+        } else {
+          console.log("Error", error);
+        }
+      });
+
+    const sayac = setInterval(() => {
+      console.log("asdasdasd");
+    }, 1000);
+
+    return () => {
+      clearInterval(sayac);
+      cancelToken.cancel("token source was cancelled");
+    };
+  }, []);
 
   return (
     <div className="container">
@@ -46,28 +102,15 @@ const Books = () => {
           </button>
         </form>
       </div>
-      <div className="list">
-        <table>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Content</th>
-            </tr>
-          </thead>
-          <tbody>
-            {books.map((book) => {
-              return (
-                <tr key={book.id}>
-                  <td>{book.title}</td>
-                  <td>{book.content}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {books.length > 0 && !isLooding ? (
+        <Table books={books} />
+      ) : (
+        <h2>Yükleniyor...</h2>
+      )}
+      <button onClick={onclickForm}>Form sayfasina git</button>
     </div>
   );
 };
 
 export default Books;
+export { Table };
